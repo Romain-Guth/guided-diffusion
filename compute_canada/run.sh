@@ -2,8 +2,8 @@
 #SBATCH --mem=64G
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=16
-#SBATCH --time=20:0:0
-#SBATCH --mail-user=97.amirsabzi@gmail.com
+#SBATCH --time=1:0:0
+#SBATCH --mail-user=romain.guth@polytechnique.edu
 #SBATCH --mail-type=ALL
 #SBATCH --gpus=1
 
