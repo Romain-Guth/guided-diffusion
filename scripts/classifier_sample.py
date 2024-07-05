@@ -68,10 +68,9 @@ def save_images(results, num_rows, num_cols, filename, plot_dir):
         data = results[keys[i]]
         data = ((data + 1) * 127.5).clamp(0, 255).to(th.uint8)
         data = data.permute(0, 2, 3, 1).contiguous().cpu().numpy()
-        axs_flat = axs.flatten()
         for j in range(num_cols):
-            axs_flat[i * num_cols + j].imshow(data[j])
-            axs_flat[i * num_cols + j].axis('off')
+            axs[i, j].imshow(data[j])
+            axs[i, j].axis('off')
     
     
      

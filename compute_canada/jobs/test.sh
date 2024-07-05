@@ -1,13 +1,12 @@
 cd ../..
-python scripts/grad_guided_sample.py \
+python scripts/classifier_sample.py \
   --attention_resolutions 32,16,8 \
   --class_cond True \
   --diffusion_steps 1000 \
   --dropout 0.1 \
   --use_ddim False \
   --image_size 64 \
-  --batch_size 1 \
-  --data_dir /home/sabzi/scratch/data/ImageNet/dir1 \
+  --batch_size 2 \
   --learn_sigma True \
   --noise_schedule cosine \
   --num_channels 192 \
@@ -18,7 +17,6 @@ python scripts/grad_guided_sample.py \
   --use_fp16 True \
   --use_scale_shift_norm True \
   --classifier_scales "1e-6, 5e-6, 1e-5" \
-  --num_samples 1 \
   --classifier_path models/64x64_classifier.pt \
   --classifier_depth 4 \
   --model_path models/64x64_diffusion.pt
