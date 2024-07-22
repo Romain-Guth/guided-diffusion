@@ -136,7 +136,8 @@ def create_argparser():
         clip_denoised = True,
         guide_scales = [0.4],
         guide_profile = "constant",
-        use_fp16 = False
+        use_fp16 = False,
+        log_dir = "logs"
     )
 
     parser = argparse.ArgumentParser()
