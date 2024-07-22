@@ -1,5 +1,5 @@
-
 import os
+import gc
 import argparse
 import datetime
 import torch as th
@@ -95,11 +95,15 @@ def main():
     with th.no_grad():
         logger.log("Measuring base performance...")
         for images, labels in eval_set:
-            images = images.to(sg_util.dev())
-            outputs = clf(images).to('cpu')
+            img = images.to(sg_util.dev())
+            outputs = clf(img).to('cpu')
             _, predicted = th.max(outputs.data, 1)
             total += labels.size(0)
             base_correct += (predicted == labels).sum().item()
+
+            del _, img, outputs, predicted
+            th.cuda.empty_cache()
+            gc.collect
 
         accuracy = 100 * base_correct / total
         logger.log(f'Accuracy of the network on the ImageNet validation images: {accuracy:.2f}%')
@@ -110,21 +114,25 @@ def main():
             model_kwargs = {"s" : scale}
             for images, labels in eval_set:
                 correct = 0
-                images = upscale(images)
-                images = images.to(sg_util.dev())                
+                img = upscale(images)
+                img = img.to(sg_util.dev())                
                 samples, _ = diffusion.p_sample_loop(
                     model_fn,
-                    (images.size(0), 3, 256, 256),
+                    (img.size(0), 3, 256, 256),
                     clip_denoised=args.clip_denoised,
                     model_kwargs=model_kwargs,
                     cond_fn=cond_fn,
                     device=sg_util.dev(),                
                 )
                 
-                images = downscale(samples)
-                outputs = clf(images).to('cpu')
+                img = downscale(samples)
+                outputs = clf(img).to('cpu')
                 _, predicted = th.max(outputs.data, 1)
                 correct += (predicted == labels).sum().item()
+
+                del samples, _, img, outputs, predicted
+                th.cuda.empty_cache()
+                gc.collect
 
             accuracy = 100 * correct / total
             logger.log(f'Accuracy of the network after {scale} strength guiding: {accuracy:.2f}%')
