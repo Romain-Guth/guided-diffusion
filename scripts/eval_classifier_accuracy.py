@@ -82,7 +82,7 @@ def main():
     downscale = transforms.Resize(224)
 
     val_dataset = datasets.ImageNet(root='./imagenet', split='val', transform=transform)
-    val_loader = DataLoader(val_dataset, batch_size=2, shuffle=False, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
     clf = models.resnet50(weights = models.ResNet50_Weights.DEFAULT).to(sg_util.dev())
     clf.eval()
@@ -91,7 +91,7 @@ def main():
     base_correct = 0
     total = 0
 
-    eval_set = [i for i in val_loader][:1]
+    eval_set = [i for i in val_loader][:args.batch_number]
 
     with th.no_grad():
         logger.log("Measuring base performance...")
@@ -102,7 +102,9 @@ def main():
             total += labels.size(0)
             base_correct += (predicted == labels).sum().item()
 
-        for scale in args.guide_scales:
+        scales = [float(i) for i in args.guide_scales.split(",")]
+
+        for scale in scales:
             logger.log(f"Measuring performance at scale {scale}...")
             model_kwargs = {"s" : scale}
             for images, labels in eval_set:
@@ -134,10 +136,12 @@ def main():
 def create_argparser():
     defaults = dict(
         clip_denoised = True,
-        guide_scales = [0.4],
+        guide_scales = "0.4,0.8",
         guide_profile = "constant",
         use_fp16 = False,
-        log_dir = "logs"
+        log_dir = "logs",
+        batch_size = 32,
+        batch_number = 10
     )
 
     parser = argparse.ArgumentParser()
