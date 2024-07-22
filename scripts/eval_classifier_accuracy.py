@@ -87,7 +87,6 @@ def main():
     clf = models.resnet50(weights = models.ResNet50_Weights.DEFAULT).to(sg_util.dev())
     clf.eval()
 
-    results = {}
     base_correct = 0
     total = 0
 
@@ -102,8 +101,10 @@ def main():
             total += labels.size(0)
             base_correct += (predicted == labels).sum().item()
 
+        accuracy = 100 * base_correct / total
+        logger.log(f'Accuracy of the network on the ImageNet validation images: {accuracy:.2f}%')
+        
         scales = [float(i) for i in args.guide_scales.split(",")]
-
         for scale in scales:
             logger.log(f"Measuring performance at scale {scale}...")
             model_kwargs = {"s" : scale}
@@ -125,13 +126,8 @@ def main():
                 _, predicted = th.max(outputs.data, 1)
                 correct += (predicted == labels).sum().item()
 
-            results[scale] = correct
-
-    accuracy = 100 * base_correct / total
-    logger.log(f'Accuracy of the network on the ImageNet validation images: {accuracy:.2f}%')
-    for scale, val in results.items():
-        accuracy = 100 * val / total
-        logger.log(f'Accuracy of the network after {scale} strength guiding: {accuracy:.2f}%')
+            accuracy = 100 * correct / total
+            logger.log(f'Accuracy of the network after {scale} strength guiding: {accuracy:.2f}%')
 
 def create_argparser():
     defaults = dict(
