@@ -123,6 +123,7 @@ class GaussianDiffusion:
         model_var_type,
         loss_type,
         rescale_timesteps=False,
+        guide_schedule = None
     ):
         self.model_mean_type = model_mean_type
         self.model_var_type = model_var_type
@@ -136,6 +137,7 @@ class GaussianDiffusion:
         assert (betas > 0).all() and (betas <= 1).all()
 
         self.num_timesteps = int(betas.shape[0])
+        self.guide_schedule = guide_schedule
 
         alphas = 1.0 - betas
         self.alphas_cumprod = np.cumprod(alphas, axis=0)
@@ -365,7 +367,7 @@ class GaussianDiffusion:
         gradient = cond_fn(x, self._scale_timesteps(t), **model_kwargs)
         logger.logkv("p_mean_var_norm", th.norm(p_mean_var["mean"]).item())
         new_mean = (
-            p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float()
+            p_mean_var["mean"].float() + self.guide_schedule[t[0]] * p_mean_var["variance"] * gradient.float()
         )
         return new_mean
 

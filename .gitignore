@@ -4,6 +4,7 @@ classify_image_graph_def.pb
 *.png
 *.txt
 *.pt
+*.egg
 
 
 logs/*
@@ -11,5 +12,5 @@ debug/*
 checkpoints/*
 guided_diffusion.egg-info/PKG-INFO
 compute_canada/gdg/*
-
-
+imagenet/*
+reference_images/*
