@@ -1,9 +1,12 @@
+
+import os
+import argparse
+import datetime
 import torch as th
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 from torch.utils.data import DataLoader
-import argparse
 from guided_diffusion import sg_util, logger
 from guided_diffusion.script_util import (
     NUM_CLASSES,
@@ -13,6 +16,19 @@ from guided_diffusion.script_util import (
 
 def main():
     args = create_argparser().parse_args()
+
+    if args.log_dir: 
+        log_dir_root = args.log_dir
+    else: 
+        log_dir_root = "logs";
+     
+    log_dir = os.path.join(
+            log_dir_root,
+            datetime.datetime.now().strftime("gdg-%Y-%m-%d-%H-%M-%S-%f"),
+        ) 
+    os.makedirs(log_dir, exist_ok=True) 
+    logger.configure(dir=log_dir)
+
     guide_schedule = th.ones((1000,)).to(sg_util.dev())
 
     model, diffusion = create_model_and_diffusion(
@@ -78,7 +94,7 @@ def main():
     eval_set = [i for i in val_loader][:1]
 
     with th.no_grad():
-        print("Measuring base performance...")
+        logger.log("Measuring base performance...")
         for images, labels in eval_set:
             images = images.to(sg_util.dev())
             outputs = clf(images).to('cpu')
@@ -87,7 +103,7 @@ def main():
             base_correct += (predicted == labels).sum().item()
 
         for scale in args.guide_scales:
-            print(f"Measuring performance at scale {scale}...")
+            logger.log(f"Measuring performance at scale {scale}...")
             model_kwargs = {"s" : scale}
             for images, labels in eval_set:
                 correct = 0
@@ -110,10 +126,10 @@ def main():
             results[scale] = correct
 
     accuracy = 100 * base_correct / total
-    print(f'Accuracy of the network on the ImageNet validation images: {accuracy:.2f}%')
+    logger.log(f'Accuracy of the network on the ImageNet validation images: {accuracy:.2f}%')
     for scale, val in results.items():
         accuracy = 100 * val / total
-        print(f'Accuracy of the network after {scale} strength guiding: {accuracy:.2f}%')
+        logger.log(f'Accuracy of the network after {scale} strength guiding: {accuracy:.2f}%')
 
 def create_argparser():
     defaults = dict(

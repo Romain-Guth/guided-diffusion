@@ -33,6 +33,9 @@ case $job_name in
     test)
         ./test.sh
         ;;
+    classifier_eval)
+        ./classifier_eval.sh
+        ;;
     *)
         echo "Error: Invalid job name."
         exit 1
