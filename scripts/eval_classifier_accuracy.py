@@ -68,8 +68,6 @@ def main():
 
     def model_fn(x, t, y=None, s=None):
         return model(x, t, s=s)
-    def cond_fn(x, t, y=None, s=None):
-        return (images - x) * s
     
     transform = transforms.Compose([
         transforms.Resize(256),
@@ -115,7 +113,11 @@ def main():
             for images, labels in eval_set:
                 correct = 0
                 img = upscale(images)
-                img = img.to(sg_util.dev())                
+                img = img.to(sg_util.dev())
+
+                def cond_fn(x, t, y=None, s=1.0):
+                    return (img - x) * s     
+                           
                 samples, _ = diffusion.p_sample_loop(
                     model_fn,
                     (img.size(0), 3, 256, 256),
