@@ -134,7 +134,7 @@ def main():
 
                 del samples, _, img, outputs, predicted
                 th.cuda.empty_cache()
-                gc.collect
+                gc.collect()
 
             accuracy = 100 * correct / total
             logger.log(f'Accuracy of the network after {scale} strength guiding: {accuracy:.2f}%')
