@@ -82,7 +82,7 @@ def main():
     val_dataset = datasets.ImageNet(root='./imagenet', split='val', transform=transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
-    clf = models.resnet50(weights = models.ResNet50_Weights.DEFAULT).to(sg_util.dev())
+    clf = models.vit_b_16(weights = models.ViT_B_16_Weights.DEFAULT).to(sg_util.dev())
     clf.eval()
 
     base_correct = 0

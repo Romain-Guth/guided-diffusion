@@ -138,7 +138,7 @@ def main():
 
     dp_scales = args.dp_scales
     dp_scales = th.tensor([float(x) for x in dp_scales.split(",")]) if dp_scales else th.tensor([0.0])
-    
+    diffusion.guide_schedule = th.ones((1000,)).to(sg_util.dev())
     
     results = {}    
     for i in range(args.num_iters):
