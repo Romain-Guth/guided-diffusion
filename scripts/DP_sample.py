@@ -136,15 +136,15 @@ def main():
 
     plot_dir = os.path.join(log_dir, "plots")
 
-    dp_scales = args.dp_scales
-    dp_scales = th.tensor([float(x) for x in dp_scales.split(",")]) if dp_scales else th.tensor([0.0])
+    guide_scales = args.guide_scales
+    guide_scales = th.tensor([float(x) for x in guide_scales.split(",")]) if guide_scales else th.tensor([0.0])
     diffusion.guide_schedule = th.ones((1000,)).to(sg_util.dev())
     
     results = {}    
     for i in range(args.num_iters):
         model_kwargs = {}
 
-        for scale in dp_scales:
+        for scale in guide_scales:
             logger.log(f"Sampling at scale {scale}")
             model_kwargs["s"] = scale.to(sg_util.dev())
             
@@ -162,7 +162,7 @@ def main():
             results[scale] = sample
 
         save_images(results=results,
-                num_rows=len(dp_scales),
+                num_rows=len(guide_scales),
                 num_cols=ref_images.size(0),
                 filename=get_finename(0, i, "data"),
                 plot_dir= plot_dir)
@@ -177,7 +177,7 @@ def create_argparser():
         use_ddim=False,
         model_path="",
         image_path="",
-        dp_scales="",
+        guide_scales="",
     )
     defaults.update(model_and_diffusion_defaults())
     defaults.update(classifier_defaults())
