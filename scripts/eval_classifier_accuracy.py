@@ -127,7 +127,7 @@ def main():
                     device=sg_util.dev(),                
                 )
                 
-                img = downscale(samples)
+                img = normalize(downscale(samples))
                 outputs = clf(img).to('cpu')
                 _, predicted = th.max(outputs.data, 1)
                 correct += (predicted == labels).sum().item()
@@ -138,6 +138,17 @@ def main():
 
             accuracy = 100 * correct / total
             logger.log(f'Accuracy of the network after {scale} strength guiding: {accuracy:.2f}%')
+
+def normalize(
+        img : th.FloatTensor, 
+        mean = [0.485, 0.456, 0.406],
+        std = [0.229, 0.224, 0.225]):
+    
+    result = .5 * img + .5
+    result[:, 0] = (result[:, 0] - mean[0])/std[0]
+    result[:, 1] = (result[:, 1] - mean[1])/std[1]
+    result[:, 2] = (result[:, 2] - mean[2])/std[2]
+    return result
 
 def create_argparser():
     defaults = dict(
