@@ -8,6 +8,7 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 from torch.utils.data import DataLoader
 from guided_diffusion import sg_util, logger
+from copy import deepcopy
 from guided_diffusion.script_util import (
     NUM_CLASSES,
     create_model_and_diffusion,
@@ -114,9 +115,11 @@ def main():
                 correct = 0
                 img = upscale(images)
                 img = img.to(sg_util.dev())
+                
+                diff_img = scale_imagenet_to_diffusion(img)
 
                 def cond_fn(x, t, y=None, s=1.0):
-                    return (img - x) * s     
+                    return (diff_img - x) * s     
                            
                 samples, _ = diffusion.p_sample_loop(
                     model_fn,
@@ -127,7 +130,7 @@ def main():
                     device=sg_util.dev(),                
                 )
                 
-                img = normalize(downscale(samples))
+                img = scale_diffusion_to_imagenet(downscale(samples))
                 outputs = clf(img).to('cpu')
                 _, predicted = th.max(outputs.data, 1)
                 correct += (predicted == labels).sum().item()
@@ -139,7 +142,18 @@ def main():
             accuracy = 100 * correct / total
             logger.log(f'Accuracy of the network after {scale} strength guiding: {accuracy:.2f}%')
 
-def normalize(
+def scale_imagenet_to_diffusion(
+        img : th.FloatTensor, 
+        mean = [0.485, 0.456, 0.406],
+        std = [0.229, 0.224, 0.225]):
+    
+    result = deepcopy(img)
+    result[:, 0] = result[:, 0] * std[0] + mean[0]
+    result[:, 1] = result[:, 1] * std[1] + mean[1]
+    result[:, 2] = result[:, 2] * std[2] + mean[2]
+    return 2 * result - 1
+
+def scale_diffusion_to_imagenet(
         img : th.FloatTensor, 
         mean = [0.485, 0.456, 0.406],
         std = [0.229, 0.224, 0.225]):
@@ -152,7 +166,7 @@ def normalize(
 
 def create_argparser():
     defaults = dict(
-        clip_denoised = True,
+        clip_denoised = False,
         guide_scales = "0.4,0.8",
         guide_profile = "constant",
         use_fp16 = False,
