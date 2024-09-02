@@ -71,14 +71,16 @@ def main():
         return model(x, t, s=s)
     
     transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+        transforms.Resize(224),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
-    upscale = transforms.Resize(256)
-    downscale = transforms.Resize(224)
+    to_diffusion = transforms.Compose([
+        transforms.Resize(256),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[.0, .0, .0], std=[1.0, 1.0, 1.0]),
+    ])
 
     val_dataset = datasets.ImageNet(root='./imagenet', split='val', transform=transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
@@ -113,10 +115,8 @@ def main():
             model_kwargs = {"s" : scale}
             for images, labels in eval_set:
                 correct = 0
-                img = upscale(images)
-                img = img.to(sg_util.dev())
                 
-                diff_img = scale_imagenet_to_diffusion(img)
+                diff_img = to_diffusion(images)
 
                 def cond_fn(x, t, y=None, s=1.0):
                     return (diff_img - x) * s     
@@ -130,7 +130,7 @@ def main():
                     device=sg_util.dev(),                
                 )
                 
-                img = scale_diffusion_to_imagenet(downscale(samples))
+                img = transform(samples)
                 outputs = clf(img).to('cpu')
                 _, predicted = th.max(outputs.data, 1)
                 correct += (predicted == labels).sum().item()
@@ -141,28 +141,6 @@ def main():
 
             accuracy = 100 * correct / total
             logger.log(f'Accuracy of the network after {scale} strength guiding: {accuracy:.2f}%')
-
-def scale_imagenet_to_diffusion(
-        img : th.FloatTensor, 
-        mean = [0.485, 0.456, 0.406],
-        std = [0.229, 0.224, 0.225]):
-    
-    result = deepcopy(img)
-    result[:, 0] = result[:, 0] * std[0] + mean[0]
-    result[:, 1] = result[:, 1] * std[1] + mean[1]
-    result[:, 2] = result[:, 2] * std[2] + mean[2]
-    return 2 * result - 1
-
-def scale_diffusion_to_imagenet(
-        img : th.FloatTensor, 
-        mean = [0.485, 0.456, 0.406],
-        std = [0.229, 0.224, 0.225]):
-    
-    result = .5 * img + .5
-    result[:, 0] = (result[:, 0] - mean[0])/std[0]
-    result[:, 1] = (result[:, 1] - mean[1])/std[1]
-    result[:, 2] = (result[:, 2] - mean[2])/std[2]
-    return result
 
 def create_argparser():
     defaults = dict(
