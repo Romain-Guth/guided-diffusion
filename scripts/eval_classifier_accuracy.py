@@ -76,14 +76,8 @@ def main():
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
-    to_diffusion = transforms.Compose([
-        transforms.Resize(256),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[.0, .0, .0], std=[1.0, 1.0, 1.0]),
-    ])
-
     val_dataset = datasets.ImageNet(root='./imagenet', split='val', transform=transform)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
 
     clf = models.vit_b_16(weights = models.ViT_B_16_Weights.DEFAULT).to(sg_util.dev())
     clf.eval()
@@ -115,11 +109,9 @@ def main():
             model_kwargs = {"s" : scale}
             for images, labels in eval_set:
                 correct = 0
-                
-                diff_img = to_diffusion(images)
 
                 def cond_fn(x, t, y=None, s=1.0):
-                    return (diff_img - x) * s     
+                    return (images - x) * s     
                            
                 samples, _ = diffusion.p_sample_loop(
                     model_fn,
@@ -130,12 +122,11 @@ def main():
                     device=sg_util.dev(),                
                 )
                 
-                img = transform(samples)
-                outputs = clf(img).to('cpu')
+                outputs = clf(samples).to('cpu')
                 _, predicted = th.max(outputs.data, 1)
                 correct += (predicted == labels).sum().item()
 
-                del samples, _, img, outputs, predicted
+                del samples, _, outputs, predicted
                 th.cuda.empty_cache()
                 gc.collect()
 
