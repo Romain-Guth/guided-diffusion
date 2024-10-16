@@ -69,12 +69,14 @@ def main():
 
     def model_fn(x, t, y=None, s=None):
         return model(x, t, s=s)
-    
+
     transform = transforms.Compose([
-        transforms.Resize(224),
+        transforms.Resize((256, 256)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
+
+    downscale = transforms.Resize((224,224))
 
     val_dataset = datasets.ImageNet(root='./imagenet', split='val', transform=transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
@@ -84,14 +86,13 @@ def main():
 
     base_correct = 0
     total = 0
-
     eval_set = [i for i in val_loader][:args.batch_number]
 
     with th.no_grad():
         logger.log("Measuring base performance...")
         for images, labels in eval_set:
             img = images.to(sg_util.dev())
-            outputs = clf(img).to('cpu')
+            outputs = clf(downscale(img)).to('cpu')
             _, predicted = th.max(outputs.data, 1)
             total += labels.size(0)
             base_correct += (predicted == labels).sum().item()
@@ -102,27 +103,28 @@ def main():
 
         accuracy = 100 * base_correct / total
         logger.log(f'Accuracy of the network on the ImageNet validation images: {accuracy:.2f}%')
-        
+
         scales = [float(i) for i in args.guide_scales.split(",")]
         for scale in scales:
+            correct = 0
             logger.log(f"Measuring performance at scale {scale}...")
             model_kwargs = {"s" : scale}
             for images, labels in eval_set:
-                correct = 0
+                ref_img = images.to(sg_util.dev())
 
                 def cond_fn(x, t, y=None, s=1.0):
-                    return (images - x) * s     
-                           
+                    return (ref_img - x) * s
+
                 samples, _ = diffusion.p_sample_loop(
                     model_fn,
-                    (img.size(0), 3, 256, 256),
+                    (images.size(0), 3, 256, 256),
                     clip_denoised=args.clip_denoised,
                     model_kwargs=model_kwargs,
                     cond_fn=cond_fn,
-                    device=sg_util.dev(),                
+                    device=sg_util.dev(),
                 )
-                
-                outputs = clf(samples).to('cpu')
+
+                outputs = clf(downscale(samples)).to('cpu')
                 _, predicted = th.max(outputs.data, 1)
                 correct += (predicted == labels).sum().item()
 
@@ -136,12 +138,12 @@ def main():
 def create_argparser():
     defaults = dict(
         clip_denoised = False,
-        guide_scales = "0.4,0.8",
+        guide_scales = "1.0,2.0",
         guide_profile = "constant",
         use_fp16 = False,
         log_dir = "logs",
-        batch_size = 32,
-        batch_number = 10
+        batch_size = 8,
+        batch_number = 40
     )
 
     parser = argparse.ArgumentParser()
